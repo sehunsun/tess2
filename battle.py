@@ -52,3 +52,22 @@ def hero_attack(monster):
             print("💀 你死亡了！遊戲結束")
             return False
     return True
+
+# =========================
+# 🔥 融合技能表（Fusion Skills）
+# =========================
+fusion_table = {
+    frozenset(["Fire", "Wind"]): {
+        "name": "烈焰風暴",
+        "bonus": 15
+    },
+    frozenset(["Water", "Ice"]): {
+        "name": "極寒洪流",
+        "bonus": 15
+    },
+    frozenset(["Light", "Dark"]): {
+        "name": "混沌審判",
+        "bonus": 25
+    },
+}
+
