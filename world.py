@@ -1,101 +1,135 @@
+# =========================
+# world.py
+# =========================
 import random
-from data import hero, party, fusion_table
+from collections import deque
+from data import hero, party, monsters, game_map, items, fusion_table
 
 # =========================
-# 🎲 擲 20 面骰
+# 🚶 移動系統
 # =========================
-def roll_d20():
-    return random.randint(1, 20)
-
-# =========================
-# ⚔️ 英雄戰鬥主流程
-# =========================
-def hero_attack(monster):
-    monster = monster.copy()
-    print(f"\n👹 遭遇怪物：{monster['name']}  HP:{monster['hp']}")
-
-    while monster["hp"] > 0 and hero["hp"] > 0:
-        # ===== 英雄攻擊 =====
-        roll = roll_d20()
-        total = roll + hero.get("attack_bonus", 0)
-
-        print(
-            f"🎲 擲骰：{roll} + {hero.get('attack_bonus',0)} "
-            f"= {total} vs AC {monster.get('ac',10)}"
-        )
-
-        if roll == 1:
-            print("❌ 攻擊失敗（大失誤）")
-
-        elif roll == 20 or total >= monster.get("ac", 10):
-            dmg = hero.get("base_damage", 10)
-
-            if roll == 20:
-                dmg *= 2
-                print("✨ 暴擊！")
-
-            monster["hp"] -= dmg
-            print(f"🔥 你造成 {dmg} 傷害 | 怪物 HP:{monster['hp']}")
-
-            # 🐉 暴擊收服龍
-            if (
-                roll == 20
-                and monster.get("is_dragon")
-                and monster not in party
-            ):
-                party.append(monster.copy())
-                print(f"🤝 {monster['name']} 加入隊伍！")
-
+def move_location(hero):
+    current = hero['location']
+    print(f"\n📍 你目前在 {current}，可以前往：")
+    options = game_map.get(current, [])
+    for i, loc in enumerate(options):
+        print(f"{i+1}. {loc}")
+    choice = input("輸入編號移動: ")
+    try:
+        idx = int(choice) - 1
+        if 0 <= idx < len(options):
+            dest = options[idx]
+            # 洞穴進入判定
+            if dest == "Cave" and current == "Forest":
+                roll = random.randint(1, 6)
+                print(f"🎲 擲骰判定進入洞穴：{roll}")
+                if roll not in [1, 3, 6]:
+                    print("❌ 擲骰失敗，無法進入洞穴")
+                    return
+            hero['location'] = dest
+            print(f"🚶 你移動到 {dest}")
+            # 切換時間
+            hero['time'] = "Evening" if hero['time'] == "Morning" else "Morning"
         else:
-            print("❌ 未命中")
+            print("❌ 無效編號")
+    except ValueError:
+        print("❌ 輸入錯誤")
 
-        if monster["hp"] <= 0:
-            print(f"🏆 擊敗 {monster['name']}！")
-            break
+# =========================
+# 👹 遭遇怪物系統
+# =========================
+def encounter_monster(location):
+    if location in ["Novice Village", "Town"]:
+        return None
+    if location == "Cave":
+        return random.choice([m for m in monsters if m["name"] in ["Slime", "Goblin"]])
+    if location == "Dungeon":
+        return random.choice([m for m in monsters if "Dragon" in m["name"] 
+                              and m["name"] not in ["Ancient Dragon","Light Dragon","Dark Dragon"]])
+    if location == "Dragon City":
+        return random.choice([m for m in monsters if m["name"] in [
+            "Fire Dragon","Ice Dragon","Ancient Dragon","Light Dragon","Dark Dragon","Water Dragon"]])
+    return random.choice([m for m in monsters if m["name"] not in [
+        "Fire Dragon","Ice Dragon","Ancient Dragon","Light Dragon","Dark Dragon","Water Dragon","Slime","Goblin"]])
 
-        # ===== 隊伍攻擊 + 融合技 =====
-        if party:
-            print("\n🛡️ 隊伍發動攻擊！")
-            elements_used = set()
+# =========================
+# 🧭 BFS 最短路徑搜尋（地圖用）
+# =========================
+def bfs_shortest_path(start, goal):
+    if start not in game_map or goal not in game_map:
+        return None
+    queue = deque([[start]])
+    visited = set()
+    while queue:
+        path = queue.popleft()
+        current = path[-1]
+        if current == goal:
+            return path
+        if current in visited:
+            continue
+        visited.add(current)
+        for neighbor in game_map[current]:
+            new_path = path + [neighbor]
+            queue.append(new_path)
+    return None
 
-            for ally in party:
-                dmg = ally.get("base_attack", 5)
-                elem = ally.get("element")
+def bfs_command():
+    print("\n🧭【BFS 最短路徑搜尋】")
+    print(f"你目前在：{hero['location']}")
+    target = input("請輸入目標地點：")
+    path = bfs_shortest_path(hero["location"], target)
+    if not path:
+        print("❌ 找不到路徑")
+        return
+    print("📍 BFS 最短路徑：")
+    print(" → ".join(path))
 
-                monster["hp"] -= dmg
-                print(
-                    f"{ally['name']} 攻擊造成 {dmg} 傷害 "
-                    f"| 怪物 HP:{monster['hp']}"
-                )
+# =========================
+# 📍 Dijkstra 裝備獲取難度
+# =========================
+import heapq
 
-                if elem:
-                    elements_used.add(elem)
+def dijkstra_shortest_path(start, goal, weights):
+    heap = [(0, start, [start])]
+    visited = set()
+    while heap:
+        cost, current, path = heapq.heappop(heap)
+        if current == goal:
+            return path, cost
+        if current in visited:
+            continue
+        visited.add(current)
+        for neighbor, weight in weights.get(current, {}).items():
+            if neighbor not in visited:
+                heapq.heappush(heap, (cost + weight, neighbor, path + [neighbor]))
+    return None, None
 
-            # 🔥 融合技能判定（完整保留）
-            for combo, skill in fusion_table.items():
-                if combo.issubset(elements_used):
-                    monster["hp"] -= skill["bonus"]
-                    print(
-                        f"💥 融合技【{skill['name']}】"
-                        f"對 {monster['name']} 造成 "
-                        f"{skill['bonus']} 點額外傷害！"
-                    )
+def dijkstra_command():
+    print("\n🛡️【裝備獲取難度 - Dijkstra】")
+    print(f"你目前在：{hero['location']}")
+    target_item_name = input("請輸入想要取得的裝備名稱：")
 
-        # ===== 怪物反擊 =====
-        if monster["hp"] > 0:
-            monster_attack = random.randint(
-                1, monster.get("base_attack", 5)
-            )
-            hero["hp"] -= monster_attack
+    # 找裝備位置
+    target_item = next((i for i in items if i["name"] == target_item_name), None)
+    if not target_item:
+        print("❌ 找不到該裝備")
+        return
 
-            print(
-                f"👹 {monster['name']} 反擊，"
-                f"對你造成 {monster_attack} 點傷害 "
-                f"| HP:{hero['hp']}"
-            )
+    # 生成權重圖（裝備難度）
+    weights = {}
+    for loc, neighbors in game_map.items():
+        weights[loc] = {}
+        for n in neighbors:
+            # 預設難度 1，如果目標是某裝備所在位置則用裝備的難度
+            w = 1
+            if n == target_item["location"]:
+                w = target_item.get("difficulty", 1)
+            weights[loc][n] = w
 
-        if hero["hp"] <= 0:
-            print("💀 你死亡了！遊戲結束")
-            return False
+    path, cost = dijkstra_shortest_path(hero["location"], target_item["location"], weights)
+    if not path:
+        print("❌ 找不到路徑")
+        return
 
-    return True
+    print(f"📍 最短路徑（考慮裝備難度）： {' → '.join(path)}")
+    print(f"⚔️ 總難度權重：{cost}")

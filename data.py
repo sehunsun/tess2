@@ -1,25 +1,23 @@
+# =========================
 # data.py
-import json
-import os
+# =========================
 
-SAVE_FILE = "save.json"
-
-# 玩家資料
+# 勇者資訊
 hero = {
     "name": "勇者",
+    "location": "Novice Village",
+    "time": "Morning",
     "hp": 50,
     "max_hp": 50,
-    "attack_bonus": 5,
+    "attack_bonus": 2,
     "base_damage": 10,
-    "brave_power": True,
-    "strength": 10,
-    "agility": 10,
-    "intelligence": 10,
-    "time": "Morning",
-    "location": "Novice Village"
+    "strength": 5,
+    "agility": 4,
+    "intelligence": 3,
+    "brave_power": True
 }
 
-# 隊伍
+# 隊友
 party = []
 
 # 地圖
@@ -32,95 +30,70 @@ game_map = {
     "Dragon City": ["Dungeon"]
 }
 
-# 裝備
-items = [
-    {"name": "新手劍", "attack": 8, "rarity": 1},
-    {"name": "木盾", "attack": 2, "rarity": 1},
-    {"name": "騎士鋼劍", "attack": 18, "rarity": 3},
-    {"name": "聖光鎧甲", "attack": 4, "rarity": 4},
-    {"name": "勇者勝利之劍", "attack": 50, "rarity": 6}
-]
-
-# 怪物
+# 怪物列表
 monsters = [
-    {"name": "Slime", "element": "None", "weakness": "Fire", "hp": 10, "ac": 8, "base_attack": 5},
-    {"name": "Goblin", "element": "None", "weakness": "Ice", "hp": 15, "ac": 11, "base_attack": 6},
-    {"name": "Skeleton", "element": "None", "weakness": "Light", "hp": 20, "ac": 13, "base_attack": 7},
-    {"name": "Orc", "element": "None", "weakness": "Lightning", "hp": 25, "ac": 14, "base_attack": 8},
-    {"name": "Fire Dragon", "element": "Fire", "weakness": "Ice", "hp": 50, "ac": 18, "base_attack": 12},
-    {"name": "Ice Dragon", "element": "Ice", "weakness": "Fire", "hp": 50, "ac": 18, "base_attack": 12},
-    {"name": "Wind Dragon", "element": "Wind", "weakness": None, "hp": 45, "ac": 17, "base_attack": 10},
-    {"name": "Earth Dragon", "element": "Earth", "weakness": None, "hp": 45, "ac": 17, "base_attack": 10},
-    {"name": "Water Dragon", "element": "Water", "weakness": None, "hp": 45, "ac": 17, "base_attack": 10},
-    {"name": "Wood Dragon", "element": "Wood", "weakness": "Wood", "hp": 50, "ac": 18, "base_attack": 11},
-    {"name": "Thunder Dragon", "element": "Thunder", "weakness": "Earth", "hp": 55, "ac": 19, "base_attack": 13},
-    {"name": "Light Dragon", "element": "Light", "weakness": "Dark", "hp": 60, "ac": 20, "base_attack": 14},
-    {"name": "Dark Dragon", "element": "Dark", "weakness": "Light", "hp": 60, "ac": 20, "base_attack": 14},
-    {"name": "Ancient Dragon", "element": "Ancient", "weakness": "Brave Power",
-     "hp": 100, "ac": 25, "base_attack": 20}
+    {"name": "Slime", "hp": 20, "ac": 8, "base_attack": 2, "element": "Water"},
+    {"name": "Goblin", "hp": 25, "ac": 10, "base_attack": 3, "element": "Earth"},
+    {"name": "Ice Dragon", "hp": 100, "ac": 15, "base_attack": 12, "is_dragon": True, "element": "Ice"},
+    {"name": "Fire Dragon", "hp": 120, "ac": 16, "base_attack": 14, "is_dragon": True, "element": "Fire"},
+    {"name": "Ancient Dragon", "hp": 200, "ac": 18, "base_attack": 20, "is_dragon": True, "element": "Earth"},
+    {"name": "Light Dragon", "hp": 150, "ac": 17, "base_attack": 16, "is_dragon": True, "element": "Light"},
+    {"name": "Dark Dragon", "hp": 150, "ac": 17, "base_attack": 16, "is_dragon": True, "element": "Dark"},
+    {"name": "Water Dragon", "hp": 110, "ac": 15, "base_attack": 13, "is_dragon": True, "element": "Water"},
+    {"name": "Orc", "hp": 40, "ac": 12, "base_attack": 5, "element": "Earth"},
+    {"name": "Troll", "hp": 60, "ac": 14, "base_attack": 6, "element": "Earth"},
+    {"name": "Goblin King", "hp": 80, "ac": 16, "base_attack": 8, "element": "Earth"},
+    {"name": "Slime King", "hp": 70, "ac": 15, "base_attack": 7, "element": "Water"},
+    {"name": "Fire Elemental", "hp": 90, "ac": 14, "base_attack": 9, "element": "Fire"},
+    {"name": "Ice Elemental", "hp": 90, "ac": 14, "base_attack": 9, "element": "Ice"}
 ]
 
-# =========================
-# 🔥 融合技能表（元素疊加）
-# key = frozenset({元素, 元素})
-# =========================
+# 裝備資料（加上難度和地點）
+items = [
+    {"name": "Iron Sword", "attack": 10, "rarity": "Common", "difficulty": 1, "location": "Novice Village"},
+    {"name": "Steel Sword", "attack": 15, "rarity": "Uncommon", "difficulty": 3, "location": "Town"},
+    {"name": "Flame Sword", "attack": 20, "rarity": "Rare", "difficulty": 5, "location": "Cave"},
+    {"name": "Dragon Shield", "attack": 5, "rarity": "Rare", "difficulty": 6, "location": "Dragon City"},
+    {"name": "Ice Staff", "attack": 18, "rarity": "Rare", "difficulty": 5, "location": "Dungeon"},
+    {"name": "Light Bow", "attack": 22, "rarity": "Epic", "difficulty": 7, "location": "Dragon City"},
+    {"name": "Dark Dagger", "attack": 20, "rarity": "Epic", "difficulty": 7, "location": "Dungeon"},
+]
 
+# 融合技能表（龍元素疊加）
 fusion_table = {
-    frozenset(["Fire", "Wind"]): {
-        "name": "烈焰風暴",
-        "bonus": 15,
-        "desc": "火焰隨風擴散，造成範圍爆炸傷害"
-    },
-    frozenset(["Water", "Ice"]): {
-        "name": "極寒洪流",
-        "bonus": 15,
-        "desc": "急凍水流封鎖敵人行動"
-    },
-    frozenset(["Light", "Dark"]): {
-        "name": "混沌審判",
-        "bonus": 25,
-        "desc": "光與暗失衡，引發毀滅性打擊"
-    },
-
-    # ⭐ 進階龍融合（我們之前想過的）
-    frozenset(["Fire", "Earth"]): {
-        "name": "熔岩震擊",
-        "bonus": 20,
-        "desc": "熔岩從地底爆發"
-    },
-    frozenset(["Wind", "Lightning"]): {
-        "name": "天雷風暴",
-        "bonus": 22,
-        "desc": "高速氣流引導雷擊"
-    },
-    frozenset(["Water", "Lightning"]): {
-        "name": "超導洪擊",
-        "bonus": 20,
-        "desc": "水流導電造成麻痺"
-    },
-
-    # 🐉 傳說級融合
-    frozenset(["Fire", "Ice"]): {
-        "name": "終焉溫差",
-        "bonus": 30,
-        "desc": "極熱與極寒同時撕裂目標"
-    }
+    frozenset(["Fire", "Wind"]): {"name": "烈焰風暴", "bonus": 15},
+    frozenset(["Water", "Ice"]): {"name": "極寒洪流", "bonus": 15},
+    frozenset(["Light", "Dark"]): {"name": "混沌審判", "bonus": 25},
+    frozenset(["Fire", "Ice"]): {"name": "融焰寒暴", "bonus": 20},
+    frozenset(["Earth", "Wind"]): {"name": "大地旋風", "bonus": 18},
+    frozenset(["Fire", "Water"]): {"name": "蒸汽爆擊", "bonus": 20},
+    frozenset(["Light", "Water"]): {"name": "聖光洪流", "bonus": 22},
+    frozenset(["Dark", "Earth"]): {"name": "暗影裂擊", "bonus": 22},
 }
 
-# 存檔/讀檔
+# =========================
+# 💾 存檔 / 讀檔系統
+# =========================
+import json
+import os
+
+SAVE_FILE = "save.json"
+
 def save_game(hero, party):
-    data = {"hero": hero, "party": party, "items": items}
+    data = {
+        "hero": hero,
+        "party": party
+    }
     with open(SAVE_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+        json.dump(data, f, ensure_ascii=False, indent=2)
     print("💾 遊戲已存檔")
 
 def load_game(hero, party):
     if not os.path.exists(SAVE_FILE):
-        print("📂 沒有存檔，開始新遊戲")
         return
     with open(SAVE_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
-    hero.update(data["hero"])
+    hero.update(data.get("hero", {}))
     party.clear()
-    party.extend(data["party"])
-    print("📂 讀取存檔完成")
+    party.extend(data.get("party", []))
+    print("📂 已讀取存檔")
